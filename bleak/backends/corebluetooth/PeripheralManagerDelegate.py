@@ -93,7 +93,7 @@ class PeripheralManagerDelegate(NSObject):
         while not self._advertisement_started:
             if not self.ready:
                 await self.is_ready()
-                return self.startAdvertising_(advertisement_data)
+                return await self.startAdvertising_(advertisement_data)
             await asyncio.sleep(0.01)
 
         logger.debug(
