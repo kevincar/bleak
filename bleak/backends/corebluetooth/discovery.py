@@ -13,6 +13,9 @@ from typing import List
 
 from bleak.backends.corebluetooth.CentralManagerDelegate import CentralManagerDelegate
 from bleak.backends.device import BLEDevice
+
+from ..corebluetooth.client import BleakClientCoreBluetooth as BleakClient
+
 from bleak.exc import BleakError
 
 async def discover(
@@ -44,4 +47,3 @@ async def discover(
 
     devices = manager.devices
     return list(devices.values())
-

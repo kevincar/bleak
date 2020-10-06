@@ -1,15 +1,22 @@
+import logging
+
 from typing import List, Union
 
-from Foundation import CBService, CBUUID
+from Foundation import CBService, CBUUID, NSStringFromClass 
 
+from bleak.exc import BleakError
 from bleak.backends.corebluetooth.characteristic import (
     BleakGATTCharacteristicCoreBluetooth
 )
-from bleak.backends.service import BleakGATTService
+from bleak.backends.service import (
+    BleakGATTService, BleakGATTServiceCollection
+)
+
+logger = logging.getLogger(name=__name__)
 
 
 class BleakGATTServiceCoreBluetooth(BleakGATTService):
-    """GATT Characteristic implementation for the CoreBluetooth backend"""
+    """GATT Service implementation for the CoreBluetooth backend"""
 
     def __init__(self, obj: CBService):
         super().__init__(obj)
@@ -38,4 +45,35 @@ class BleakGATTServiceCoreBluetooth(BleakGATTService):
 
         Should not be used by end user, but rather by `bleak` itself.
         """
+        if characteristic in self.__characteristics:
+            logger.warn("Service {} already has characteristic {}".format(self.uuid, characteristic.uuid))
+            return
+
         self.__characteristics.append(characteristic)
+        
+        obj_class_name = NSStringFromClass(self.obj.class__())
+        if obj_class_name == "CBMutableService":
+            characteristics = list(map(lambda x: x.obj, self.__characteristics))
+            self.obj.setCharacteristics_(characteristics)
+            logger.debug("Adding CBMutableCharacteristic {} to CBMutableService {}".format(characteristic.uuid, self.uuid))
+
+
+class BleakGATTServiceCollectionCoreBluetooth(BleakGATTServiceCollection):
+    """Simple data container for storing the peripheral's service complement."""
+
+    def __init__(self):
+        super(BleakGATTServiceCollectionCoreBluetooth, self).__init__()
+
+    def add_characteristic(self, characteristic: BleakGATTCharacteristicCoreBluetooth):
+        """Add a :py:class:`~BleakGATTCharacteristic` to the service collection.
+
+        Should not be used by end user, but rather by `bleak` itself.
+        """
+        if characteristic.uuid not in self.characteristics:
+            self.characteristics[characteristic.uuid] = characteristic
+            self.services[characteristic.service_uuid].add_characteristic(characteristic)
+        else:
+            raise BleakError(
+                "This characteristic is already present in this BleakGATTServiceCollection!"
+            )
+

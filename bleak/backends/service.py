@@ -56,7 +56,7 @@ class BleakGATTService(abc.ABC):
         raise NotImplementedError()
 
 
-class BleakGATTServiceCollection(object):
+class BleakGATTServiceCollection(abc.ABC):
     """Simple data container for storing the peripheral's service complement."""
 
     def __init__(self):
@@ -107,6 +107,7 @@ class BleakGATTServiceCollection(object):
         """Get a service by UUID string"""
         return self.services.get(str(_uuid), None)
 
+    @abc.abstractmethod
     def add_characteristic(self, characteristic: BleakGATTCharacteristic):
         """Add a :py:class:`~BleakGATTCharacteristic` to the service collection.
 
