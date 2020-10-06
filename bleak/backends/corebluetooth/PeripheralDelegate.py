@@ -59,6 +59,7 @@ class PeripheralDelegate(NSObject):
         self.peripheral = peripheral
         self.peripheral.setDelegate_(self)
 
+        self._event_loop = asyncio.get_event_loop()
         self._services_discovered_event = asyncio.Event()
 
         self._service_characteristic_discovered_events = _EventDict()
@@ -79,7 +80,7 @@ class PeripheralDelegate(NSObject):
         return self
 
     def compliant(self):
-        """Determins whether the class adheres to the CBCentralManagerDelegate protocol"""
+        """Determines whether the class adheres to the CBPeripheralDelegate protocol"""
         return PeripheralDelegate.pyobjc_classMethods.conformsToProtocol_(
             CBPeripheralDelegate
         )
@@ -209,7 +210,9 @@ class PeripheralDelegate(NSObject):
         return True
 
     # Protocol Functions
-    def peripheral_didDiscoverServices_(
+
+    @objc.python_method
+    def did_discover_services(
         self, peripheral: CBPeripheral, error: NSError
     ) -> None:
         if error is not None:
@@ -218,7 +221,18 @@ class PeripheralDelegate(NSObject):
         logger.debug("Services discovered")
         self._services_discovered_event.set()
 
-    def peripheral_didDiscoverCharacteristicsForService_error_(
+    def peripheral_didDiscoverServices_(
+        self, peripheral: CBPeripheral, error: NSError
+    ) -> None:
+        logger.debug("peripheral_didDiscoverServices_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_discover_services,
+            peripheral,
+            error,
+        )
+
+    @objc.python_method
+    def did_discover_characteristics_for_service(
         self, peripheral: CBPeripheral, service: CBService, error: NSError
     ):
         sUUID = service.UUID().UUIDString()
@@ -234,7 +248,19 @@ class PeripheralDelegate(NSObject):
         else:
             logger.debug("Unexpected event didDiscoverCharacteristicsForService")
 
-    def peripheral_didDiscoverDescriptorsForCharacteristic_error_(
+    def peripheral_didDiscoverCharacteristicsForService_error_(
+        self, peripheral: CBPeripheral, service: CBService, error: NSError
+    ):
+        logger.debug("peripheral_didDiscoverCharacteristicsForService_error_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_discover_characteristics_for_service,
+            peripheral,
+            service,
+            error,
+        )
+
+    @objc.python_method
+    def did_discover_descriptors_for_characteristic(
         self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
     ):
         cUUID = characteristic.UUID().UUIDString()
@@ -252,7 +278,19 @@ class PeripheralDelegate(NSObject):
         else:
             logger.warning("Unexpected event didDiscoverDescriptorsForCharacteristic")
 
-    def peripheral_didUpdateValueForCharacteristic_error_(
+    def peripheral_didDiscoverDescriptorsForCharacteristic_error_(
+        self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
+    ):
+        logger.debug("peripheral_didDiscoverDescriptorsForCharacteristic_error_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_discover_descriptors_for_characteristic,
+            peripheral,
+            characteristic,
+            error,
+        )
+
+    @objc.python_method
+    def did_update_value_for_characteristic(
         self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
     ):
         cUUID = characteristic.UUID().UUIDString()
@@ -273,7 +311,19 @@ class PeripheralDelegate(NSObject):
             # only expected on read
             pass
 
-    def peripheral_didUpdateValueForDescriptor_error_(
+    def peripheral_didUpdateValueForCharacteristic_error_(
+        self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
+    ):
+        logger.debug("peripheral_didUpdateValueForCharacteristic_error_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_update_value_for_characteristic,
+            peripheral,
+            characteristic,
+            error,
+        )
+
+    @objc.python_method
+    def did_update_value_for_descriptor(
         self, peripheral: CBPeripheral, descriptor: CBDescriptor, error: NSError
     ):
         dUUID = descriptor.UUID().UUIDString()
@@ -289,7 +339,19 @@ class PeripheralDelegate(NSObject):
         else:
             logger.warning("Unexpected event didUpdateValueForDescriptor")
 
-    def peripheral_didWriteValueForCharacteristic_error_(
+    def peripheral_didUpdateValueForDescriptor_error_(
+        self, peripheral: CBPeripheral, descriptor: CBDescriptor, error: NSError
+    ):
+        logger.debug("peripheral_didUpdateValueForDescriptor_error_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_update_value_for_descriptor,
+            peripheral,
+            descriptor,
+            error,
+        )
+
+    @objc.python_method
+    def did_write_value_for_characteristic(
         self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
     ):
         cUUID = characteristic.UUID().UUIDString()
@@ -306,7 +368,19 @@ class PeripheralDelegate(NSObject):
             # event only expected on write with response
             pass
 
-    def peripheral_didWriteValueForDescriptor_error_(
+    def peripheral_didWriteValueForCharacteristic_error_(
+        self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
+    ):
+        logger.debug("peripheral_didWriteValueForCharacteristic_error_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_write_value_for_characteristic,
+            peripheral,
+            characteristic,
+            error,
+        )
+
+    @objc.python_method
+    def did_write_value_for_descriptor(
         self, peripheral: CBPeripheral, descriptor: CBDescriptor, error: NSError
     ):
         dUUID = descriptor.UUID().UUIDString()
@@ -320,7 +394,19 @@ class PeripheralDelegate(NSObject):
         else:
             logger.warning("Unexpected event didWriteValueForDescriptor")
 
-    def peripheral_didUpdateNotificationStateForCharacteristic_error_(
+    def peripheral_didWriteValueForDescriptor_error_(
+        self, peripheral: CBPeripheral, descriptor: CBDescriptor, error: NSError
+    ):
+        logger.debug("peripheral_didWriteValueForDescriptor_error_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_write_value_for_descriptor,
+            peripheral,
+            descriptor,
+            error,
+        )
+
+    @objc.python_method
+    def did_update_notification_for_characteristic(
         self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
     ):
         cUUID = characteristic.UUID().UUIDString()
@@ -340,3 +426,13 @@ class PeripheralDelegate(NSObject):
                 "Unexpected event didUpdateNotificationStateForCharacteristic"
             )
 
+    def peripheral_didUpdateNotificationStateForCharacteristic_error_(
+        self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
+    ):
+        logger.debug("peripheral_didUpdateNotificationStateForCharacteristic_error_")
+        self._event_loop.call_soon_threadsafe(
+            self.did_update_notification_for_characteristic,
+            peripheral,
+            characteristic,
+            error,
+        )

@@ -44,6 +44,12 @@ class BleakGATTCharacteristic(abc.ABC):
 
     @property
     @abc.abstractmethod
+    def handle(self) -> int:
+        """The handle for this characteristic"""
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
     def uuid(self) -> str:
         """The UUID for this characteristic"""
         raise NotImplementedError()
@@ -73,8 +79,8 @@ class BleakGATTCharacteristic(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_descriptor(self, _uuid: Union[str, UUID]) -> Union[BleakGATTDescriptor, None]:
-        """Get a descriptor by UUID"""
+    def get_descriptor(self, specifier: Union[int, str, UUID]) -> Union[BleakGATTDescriptor, None]:
+        """Get a descriptor by handle (int) or UUID (str or uuid.UUID)"""
         raise NotImplementedError()
 
     @abc.abstractmethod

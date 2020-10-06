@@ -15,8 +15,10 @@ from Foundation import CBCharacteristic, CBMutableCharacteristic, CBUUID, NSData
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak.backends.corebluetooth.descriptor import BleakGATTDescriptorCoreBluetooth
 from bleak.backends.descriptor import BleakGATTDescriptor
+from bleak.backends.corebluetooth.utils import cb_uuid_to_str
 
 logger = logging.getLogger(name=__name__)
+
 
 class CBChacteristicProperties(Enum):
     BROADCAST = 0x1
@@ -75,6 +77,8 @@ class BleakGATTCharacteristicCoreBluetooth(BleakGATTCharacteristic):
             for v in [2 ** n for n in range(10)]
             if (self.obj.properties() & v)
         ]
+        uuid_string = self.obj.UUID().UUIDString()
+        self._uuid = cb_uuid_to_str(uuid_string)
 
     def __str__(self):
         return "{0}: {1}".format(self.uuid, self.description)
@@ -85,9 +89,14 @@ class BleakGATTCharacteristicCoreBluetooth(BleakGATTCharacteristic):
         return self.obj.service().UUID().UUIDString()
 
     @property
+    def handle(self) -> int:
+        """Integer handle for this characteristic"""
+        return int(self.obj.handle())
+
+    @property
     def uuid(self) -> str:
         """The uuid of this characteristic"""
-        return self.obj.UUID().UUIDString()
+        return self._uuid
 
     @property
     def description(self) -> str:
@@ -110,10 +119,13 @@ class BleakGATTCharacteristicCoreBluetooth(BleakGATTCharacteristic):
         """List of descriptors for this service"""
         return self.__descriptors
 
-    def get_descriptor(self, _uuid) -> Union[BleakGATTDescriptorCoreBluetooth, None]:
-        """Get a descriptor by UUID"""
+    def get_descriptor(self, specifier) -> Union[BleakGATTDescriptorCoreBluetooth, None]:
+        """Get a descriptor by handle (int) or UUID (str or uuid.UUID)"""
         try:
-            return next(filter(lambda x: x.uuid == _uuid, self.descriptors))
+            if isinstance(specifier, int):
+                return next(filter(lambda x: x.handle == specifier, self.descriptors))
+            else:
+                return next(filter(lambda x: x.uuid == str(specifier), self.descriptors))
         except StopIteration:
             return None
 
