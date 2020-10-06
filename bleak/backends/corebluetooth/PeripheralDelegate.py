@@ -21,6 +21,7 @@ from Foundation import (
     NSData,
     NSError,
 )
+from CoreBluetooth import CBCharacteristicWriteWithResponse, CBCharacteristicWriteWithoutResponse
 
 from bleak.exc import BleakError
 
@@ -160,7 +161,8 @@ class PeripheralDelegate(NSObject):
         self.peripheral.writeValue_forCharacteristic_type_(
             value, characteristic, response
         )
-        if response:
+
+        if response == CBCharacteristicWriteWithResponse:
             await event.wait()
 
         return True
