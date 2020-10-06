@@ -9,7 +9,7 @@ import pathlib
 import logging
 import asyncio
 from typing import List
-from asyncio.events import AbstractEventLoop
+
 
 from bleak.backends.device import BLEDevice
 
@@ -23,20 +23,18 @@ from Windows.Devices.Bluetooth.Advertisement import (
     BluetoothLEScanningMode,
     BluetoothLEAdvertisementType,
 )
-from Windows.Storage.Streams import DataReader, IBuffer
+
+from bleak.backends.dotnet.utils import BleakDataReader
 
 logger = logging.getLogger(__name__)
 _here = pathlib.Path(__file__).parent
 
 
-async def discover(
-    timeout: float = 5.0, loop: AbstractEventLoop = None, **kwargs
-) -> List[BLEDevice]:
+async def discover(timeout: float = 5.0, **kwargs) -> List[BLEDevice]:
     """Perform a Bluetooth LE Scan using Windows.Devices.Bluetooth.Advertisement
 
     Args:
         timeout (float): Time to scan for.
-        loop (Event Loop): The event loop to use.
 
     Keyword Args:
         SignalStrengthFilter (Windows.Devices.Bluetooth.BluetoothSignalStrengthFilter): A
@@ -54,8 +52,6 @@ async def discover(
     """
     signal_strength_filter = kwargs.get("SignalStrengthFilter", None)
     advertisement_filter = kwargs.get("AdvertisementFilter", None)
-
-    loop = loop if loop else asyncio.get_event_loop()
 
     watcher = BluetoothLEAdvertisementWatcher()
 
@@ -104,7 +100,7 @@ async def discover(
 
     # Watcher works outside of the Python process.
     watcher.Start()
-    await asyncio.sleep(timeout, loop=loop)
+    await asyncio.sleep(timeout)
     watcher.Stop()
 
     try:
@@ -121,11 +117,8 @@ async def discover(
             uuids.append(u.ToString())
         data = {}
         for m in d.Advertisement.ManufacturerData:
-            md = IBuffer(m.Data)
-            b = Array.CreateInstance(Byte, md.Length)
-            reader = DataReader.FromBuffer(md)
-            reader.ReadBytes(b)
-            data[m.CompanyId] = bytes(b)
+            with BleakDataReader(m.Data) as reader:
+                data[m.CompanyId] = reader.read()
         local_name = d.Advertisement.LocalName
         if not local_name and d.BluetoothAddress in scan_responses:
             local_name = scan_responses[d.BluetoothAddress].Advertisement.LocalName
@@ -136,14 +129,11 @@ async def discover(
     return found
 
 
-async def discover_by_enumeration(
-    timeout: float = 5.0, loop: AbstractEventLoop = None, **kwargs
-) -> List[BLEDevice]:
+async def discover_by_enumeration(timeout: float = 5.0, **kwargs) -> List[BLEDevice]:
     """Perform a Bluetooth LE Scan using Windows.Devices.Enumeration
 
     Args:
         timeout (float): Time to scan for.
-        loop (Event Loop): The event loop to use.
 
     Keyword Args:
         string_output (bool): If set to false, ``discover`` returns .NET
@@ -153,8 +143,6 @@ async def discover_by_enumeration(
         List of strings or objects found.
 
     """
-    loop = loop if loop else asyncio.get_event_loop()
-
     requested_properties = Array[str](
         [
             "System.Devices.Aep.DeviceAddress",
@@ -234,7 +222,7 @@ async def discover_by_enumeration(
 
     # Watcher works outside of the Python process.
     watcher.Start()
-    await asyncio.sleep(timeout, loop=loop)
+    await asyncio.sleep(timeout)
     watcher.Stop()
 
     try:

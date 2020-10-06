@@ -1,21 +1,16 @@
 """
-Services
-----------------
-
-An example showing how to fetch all services and print them.
-
-Updated on 2019-03-25 by hbldh <henrik.blidh@nedomkull.com>
-
+Connect by BLEDevice
 """
 
 import asyncio
 import platform
 
-from bleak import BleakClient
+from bleak import BleakClient, BleakScanner
 
 
 async def print_services(mac_addr: str):
-    async with BleakClient(mac_addr) as client:
+    device = await BleakScanner.find_device_by_address(mac_addr)
+    async with BleakClient(device) as client:
         svcs = await client.get_services()
         print("Services:", svcs)
 
