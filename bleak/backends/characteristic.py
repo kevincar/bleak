@@ -91,8 +91,7 @@ class BleakGATTCharacteristic(abc.ABC):
         """
         raise NotImplementedError()
 
-    @value.setter
     @abc.abstractmethod
-    def value(self, value: bytearray):
+    def set_value(self, value: bytearray):
         """Set the value for the characteristic"""
         raise NotImplementedError()
