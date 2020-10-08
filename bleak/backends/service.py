@@ -8,7 +8,7 @@ Created on 2019-03-19 by hbldh <henrik.blidh@nedomkull.com>
 import abc
 import uuid
 from uuid import UUID
-from typing import List, Union, Iterator
+from typing import List, Union, Iterator, Dict
 
 from bleak import BleakError
 from bleak.uuids import uuidstr_to_str
@@ -60,7 +60,7 @@ class BleakGATTServiceCollection(abc.ABC):
     """Simple data container for storing the peripheral's service complement."""
 
     def __init__(self):
-        self.__services = {}
+        self.__services: Dict[str, BleakGATTService] = {}
         self.__characteristics = {}
         self.__descriptors = {}
 
@@ -129,7 +129,7 @@ class BleakGATTServiceCollection(abc.ABC):
             return self.characteristics.get(specifier, None)
         else:
             # Assume uuid usage.
-            x = list(filter(lambda x: x.uuid == str(specifier), self.characteristics.values()))
+            x = list(filter(lambda x: x.uuid == str(specifier.lower()), self.characteristics.values()))
             if len(x) > 1:
                 raise BleakError("Multiple Characteristics with this UUID, refer to your desired characteristic by the `handle` attribute instead.")
             else:
