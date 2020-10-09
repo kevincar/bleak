@@ -10,12 +10,56 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 `Unreleased`_
 -------------
 
-Changed
+Added
+~~~~~
+
+* Timeout for BlueZ backend connect call to avoid potential infinite hanging. Merged #306.
+* Added Interfaces API docs again.
+
+Fixed
+~~~~~
+
+* UUID property bug fixed in BlueZ backend. Merged #307
+* Fix for broken RTD documentation.
+
+`0.8.0`_ (2020-09-22)
+---------------------
+
+Added
+~~~~~
+
+* Implemented ``set_disconnected_callback`` in the .NET backend ``BleakClient`` implementation.
+* Added ``find_device_by_address`` method to the ``BleakScanner`` interface, for stopping scanning
+  when a desired address is found.
+* Implemented ``find_device_by_address`` in the .NET backend ``BleakScanner`` implementation and
+  switched its ``BleakClient`` implementation to use that method in ``connect``.
+* Implemented ``find_device_by_address`` in the BlueZ backend ``BleakScanner`` implementation and
+  switched its ``BleakClient`` implementation to use that method in ``connect``.
+* Implemented ``find_device_by_address`` in the Core Bluetooth backend ``BleakScanner`` implementation
+  and switched its ``BleakClient`` implementation to use that method in ``connect``.
+* Added text representations of Protocol Errors that are visible in the .NET backend. Added these texts to errors raised.
+* Added pairing method in ``BleakClient`` interface.
+* Implemented pairing method in .NET backend.
+* Implemented pairing method in the BlueZ backend.
+* Added stumps and ``NotImplementedError`` on pairing in macOS backend.
+* Added the possibility to connect using ``BLEDevice`` instead of a string address. This
+  allows for skipping the discovery call when connecting.
+
+Removed
 ~~~~~~~
 
+* Support for Python 3.5.
+
+Changed
+~~~~~~~
+* **BREAKING CHANGE** All notifications now have the characteristic's integer **handle** instead of its UUID as a
+  string as the first argument ``sender`` sent to notification callbacks. This provides the uniqueness of
+  sender in notifications as well.
+* Renamed ``BleakClient`` argument ``address`` to ``address_or_ble_device``.
 * Version 0.5.0 of BleakUWPBridge, with some modified methods and implementing ``IDisposable``.
 * Merged #224. All storing and passing of event loops in bleak is removed.
 * Removed Objective C delegate compliance checks. Merged #253.
+* Made context managers for .NET ``DataReader`` and ``DataWriter``.
 
 Fixed
 ~~~~~
@@ -26,11 +70,10 @@ Fixed
 * Attempted fix of #255 and #133: cleanups, disposing of objects and creating new ``BleakBridge`` instances each disconnect.
 * Fixed some type hints and docstrings.
 * Modified the ``connected_peripheral_delegate`` handling in macOS backend to fix #213 and #116.
-
-Added
-~~~~~
-
-* Added text representations of Protocol Errors that are visible in the .NET backend. Added these texts to errors raised.
+* Merged #270, fixing a critical bug in ``get_services`` method in Core Bluetooth backend.
+* Improved handling of disconnections and ``is_connected`` in BlueZ backend to fix #259.
+* Fix for ``set_disconnected_callback`` on Core Bluetooth. Fixes #276.
+* Safer `Core Bluetooth` presence check. Merged #280.
 
 `0.7.1`_ (2020-07-02)
 ---------------------
@@ -38,7 +81,7 @@ Added
 Changed
 ~~~~~~~
 
-* Improved, more explantory error on BlueZ backend when ``BleakClient`` cannot find the desired device when trying to connect. (#238)
+* Improved, more explanatory error on BlueZ backend when ``BleakClient`` cannot find the desired device when trying to connect. (#238)
 * Better-than-nothing documentation about scanning filters added (#230).
 * Ran black on code which was forgotten in 0.7.0. Large diffs due to that.
 * Re-adding Python 3.8 CI "tests" on Windows again.
@@ -273,7 +316,8 @@ Fixed
 * Bleak created.
 
 
-.. _Unreleased: https://github.com/hbldh/bleak/compare/v0.7.1...develop
+.. _Unreleased: https://github.com/hbldh/bleak/compare/v0.8.0...develop
+.. _0.8.0: https://github.com/hbldh/bleak/compare/v0.8.0...v0.7.1
 .. _0.7.1: https://github.com/hbldh/bleak/compare/v0.7.1...v0.7.0
 .. _0.7.0: https://github.com/hbldh/bleak/compare/v0.7.0...v0.6.4
 .. _0.6.4: https://github.com/hbldh/bleak/compare/v0.6.3...v0.6.4
