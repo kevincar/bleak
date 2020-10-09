@@ -6,7 +6,7 @@ from Foundation import CBService, CBUUID, NSStringFromClass
 
 from bleak.exc import BleakError
 from bleak.backends.corebluetooth.characteristic import (
-    BleakGATTCharacteristicCoreBluetooth
+    BleakGATTCharacteristicCoreBluetooth,
 )
 from bleak.backends.service import (
     BleakGATTService, BleakGATTServiceCollection

@@ -21,7 +21,10 @@ from Foundation import (
     NSData,
     NSError,
 )
-from CoreBluetooth import CBCharacteristicWriteWithResponse, CBCharacteristicWriteWithoutResponse
+from CoreBluetooth import (
+    CBCharacteristicWriteWithResponse,
+    CBCharacteristicWriteWithoutResponse,
+)
 
 from bleak.exc import BleakError
 
@@ -212,9 +215,7 @@ class PeripheralDelegate(NSObject):
     # Protocol Functions
 
     @objc.python_method
-    def did_discover_services(
-        self, peripheral: CBPeripheral, error: NSError
-    ) -> None:
+    def did_discover_services(self, peripheral: CBPeripheral, error: NSError) -> None:
         if error is not None:
             raise BleakError("Failed to discover services {}".format(error))
 
@@ -226,9 +227,7 @@ class PeripheralDelegate(NSObject):
     ) -> None:
         logger.debug("peripheral_didDiscoverServices_")
         self._event_loop.call_soon_threadsafe(
-            self.did_discover_services,
-            peripheral,
-            error,
+            self.did_discover_services, peripheral, error,
         )
 
     @objc.python_method
@@ -253,10 +252,7 @@ class PeripheralDelegate(NSObject):
     ):
         logger.debug("peripheral_didDiscoverCharacteristicsForService_error_")
         self._event_loop.call_soon_threadsafe(
-            self.did_discover_characteristics_for_service,
-            peripheral,
-            service,
-            error,
+            self.did_discover_characteristics_for_service, peripheral, service, error,
         )
 
     @objc.python_method
@@ -291,7 +287,11 @@ class PeripheralDelegate(NSObject):
 
     @objc.python_method
     def did_update_value_for_characteristic(
-        self, peripheral: CBPeripheral, characteristic: CBCharacteristic, error: NSError
+        self,
+        peripheral: CBPeripheral,
+        characteristic: CBCharacteristic,
+        value: bytes,
+        error: NSError,
     ):
         cUUID = characteristic.UUID().UUIDString()
         if error is not None:
@@ -301,7 +301,7 @@ class PeripheralDelegate(NSObject):
 
         notify_callback = self._characteristic_notify_callbacks.get(cUUID)
         if notify_callback:
-            notify_callback(cUUID, characteristic.value())
+            notify_callback(cUUID, value)
 
         logger.debug("Read characteristic value")
         event = self._characteristic_read_events.get(cUUID)
@@ -319,6 +319,7 @@ class PeripheralDelegate(NSObject):
             self.did_update_value_for_characteristic,
             peripheral,
             characteristic,
+            characteristic.value(),
             error,
         )
 
@@ -328,9 +329,7 @@ class PeripheralDelegate(NSObject):
     ):
         dUUID = descriptor.UUID().UUIDString()
         if error is not None:
-            raise BleakError(
-                "Failed to read characteristic {}: {}".format(dUUID, error)
-            )
+            raise BleakError("Failed to read descriptor {}: {}".format(dUUID, error))
 
         logger.debug("Read descriptor value")
         event = self._descriptor_read_events.get(dUUID)
@@ -344,10 +343,7 @@ class PeripheralDelegate(NSObject):
     ):
         logger.debug("peripheral_didUpdateValueForDescriptor_error_")
         self._event_loop.call_soon_threadsafe(
-            self.did_update_value_for_descriptor,
-            peripheral,
-            descriptor,
-            error,
+            self.did_update_value_for_descriptor, peripheral, descriptor, error,
         )
 
     @objc.python_method
@@ -373,10 +369,7 @@ class PeripheralDelegate(NSObject):
     ):
         logger.debug("peripheral_didWriteValueForCharacteristic_error_")
         self._event_loop.call_soon_threadsafe(
-            self.did_write_value_for_characteristic,
-            peripheral,
-            characteristic,
-            error,
+            self.did_write_value_for_characteristic, peripheral, characteristic, error,
         )
 
     @objc.python_method
@@ -399,10 +392,7 @@ class PeripheralDelegate(NSObject):
     ):
         logger.debug("peripheral_didWriteValueForDescriptor_error_")
         self._event_loop.call_soon_threadsafe(
-            self.did_write_value_for_descriptor,
-            peripheral,
-            descriptor,
-            error,
+            self.did_write_value_for_descriptor, peripheral, descriptor, error,
         )
 
     @objc.python_method

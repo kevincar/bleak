@@ -10,12 +10,15 @@ from asyncio.events import AbstractEventLoop
 from typing import Callable, Any, Union, List
 
 from Foundation import NSData, CBUUID
-from CoreBluetooth import CBCharacteristicWriteWithResponse, CBCharacteristicWriteWithoutResponse
+from CoreBluetooth import (
+    CBCharacteristicWriteWithResponse,
+    CBCharacteristicWriteWithoutResponse,
+)
 
 from bleak.backends.client import BaseBleakClient
 
 from bleak.backends.corebluetooth.characteristic import (
-    BleakGATTCharacteristicCoreBluetooth
+    BleakGATTCharacteristicCoreBluetooth,
 )
 from bleak.backends.corebluetooth.descriptor import BleakGATTDescriptorCoreBluetooth
 from bleak.backends.corebluetooth.service import (
@@ -152,9 +155,7 @@ class BleakClientCoreBluetooth(BaseBleakClient):
 
         logger.debug("Retrieving services...")
         manager = self._device_info.manager().delegate()
-        services = (
-            await manager.connected_peripheral_delegate.discoverServices()
-        )
+        services = await manager.connected_peripheral_delegate.discoverServices()
 
         for service in services:
             serviceUUID = service.UUID().UUIDString()
@@ -183,7 +184,9 @@ class BleakClientCoreBluetooth(BaseBleakClient):
                 for descriptor in descriptors:
                     self._services.add_descriptor(
                         BleakGATTDescriptorCoreBluetooth(
-                            descriptor, characteristic.UUID().UUIDString(), int(characteristic.handle())
+                            descriptor,
+                            characteristic.UUID().UUIDString(),
+                            int(characteristic.handle()),
                         )
                     )
 
@@ -192,7 +195,12 @@ class BleakClientCoreBluetooth(BaseBleakClient):
         # self._services = services
         return self._services
 
-    async def read_gatt_char(self, char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID], use_cached=False, **kwargs) -> bytearray:
+    async def read_gatt_char(
+        self,
+        char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID],
+        use_cached=False,
+        **kwargs
+    ) -> bytearray:
         """Perform read operation on the specified GATT characteristic.
 
         Args:
@@ -256,7 +264,10 @@ class BleakClientCoreBluetooth(BaseBleakClient):
         return value
 
     async def write_gatt_char(
-        self, char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID], data: bytearray, response: bool = False
+        self,
+        char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID],
+        data: bytearray,
+        response: bool = False,
     ) -> None:
         """Perform a write operation of the specified GATT characteristic.
 
@@ -282,11 +293,15 @@ class BleakClientCoreBluetooth(BaseBleakClient):
         success = await manager.connected_peripheral_delegate.writeCharacteristic_value_type_(
             characteristic.obj,
             value,
-            CBCharacteristicWriteWithResponse if response else CBCharacteristicWriteWithoutResponse
+            CBCharacteristicWriteWithResponse
+            if response
+            else CBCharacteristicWriteWithoutResponse,
         )
 
         if success:
-            logger.debug("Write Characteristic {0} : {1}".format(characteristic.uuid, data))
+            logger.debug(
+                "Write Characteristic {0} : {1}".format(characteristic.uuid, data)
+            )
         else:
             raise BleakError(
                 "Could not write value {0} to characteristic {1}: {2}".format(
@@ -323,7 +338,10 @@ class BleakClientCoreBluetooth(BaseBleakClient):
             )
 
     async def start_notify(
-        self, char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID], callback: Callable[[str, Any], Any], **kwargs
+        self,
+        char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID],
+        callback: Callable[[str, Any], Any],
+        **kwargs
     ) -> None:
         """Activate notifications/indications on a characteristic.
 
@@ -363,7 +381,9 @@ class BleakClientCoreBluetooth(BaseBleakClient):
                 )
             )
 
-    async def stop_notify(self, char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID]) -> None:
+    async def stop_notify(
+        self, char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID]
+    ) -> None:
         """Deactivate notification/indication on a specified characteristic.
 
         Args:

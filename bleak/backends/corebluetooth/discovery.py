@@ -18,6 +18,7 @@ from ..corebluetooth.client import BleakClientCoreBluetooth as BleakClient
 
 from bleak.exc import BleakError
 
+
 async def discover(
     timeout: float = 5.0, loop: AbstractEventLoop = None, **kwargs
 ) -> List[BLEDevice]:
