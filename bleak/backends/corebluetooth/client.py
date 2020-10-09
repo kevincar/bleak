@@ -1,12 +1,16 @@
 """
 BLE Client for CoreBluetooth on macOS
 
-Created on 2019-6-26 by kevincar <kevincarrolldavis@gmail.com>
+Created on 2019-06-26 by kevincar <kevincarrolldavis@gmail.com>
 """
 
 import logging
 import uuid
+
+from typing import Callable, Any, Union, List
+import asyncio
 from asyncio.events import AbstractEventLoop
+
 from typing import Callable, Any, Union, List
 
 from Foundation import NSData, CBUUID
@@ -21,10 +25,8 @@ from bleak.backends.corebluetooth.characteristic import (
     BleakGATTCharacteristicCoreBluetooth,
 )
 from bleak.backends.corebluetooth.descriptor import BleakGATTDescriptorCoreBluetooth
-from bleak.backends.corebluetooth.service import (
-    BleakGATTServiceCoreBluetooth,
-    BleakGATTServiceCollectionCoreBluetooth
-)
+from bleak.backends.corebluetooth.scanner import BleakScannerCoreBluetooth
+from bleak.backends.corebluetooth.service import BleakGATTServiceCoreBluetooth
 from bleak.backends.device import BLEDevice
 from bleak.backends.service import BleakGATTServiceCollection
 from bleak.backends.characteristic import BleakGATTCharacteristic
@@ -38,16 +40,20 @@ class BleakClientCoreBluetooth(BaseBleakClient):
     """CoreBluetooth class interface for BleakClient
 
     Args:
-        address (str): The uuid of the BLE peripheral to connect to.
-        loop (asyncio.events.AbstractEventLoop): The event loop to use.
+        address_or_ble_device (`BLEDevice` or str): The Bluetooth address of the BLE peripheral to connect to or the `BLEDevice` object representing it.
 
     Keyword Args:
-        timeout (float): Timeout for required ``discover`` call during connect. Defaults to 2.0.
+        timeout (float): Timeout for required ``BleakScanner.find_device_by_address`` call. Defaults to 10.0.
 
     """
 
-    def __init__(self, address: str, loop: AbstractEventLoop = None, **kwargs):
-        super(BleakClientCoreBluetooth, self).__init__(address, loop, **kwargs)
+    def __init__(self, address_or_ble_device: Union[BLEDevice, str], **kwargs):
+        super(BleakClientCoreBluetooth, self).__init__(address_or_ble_device, **kwargs)
+
+        if isinstance(address_or_ble_device, BLEDevice):
+            self._device_info = address_or_ble_device.details
+        else:
+            self._device_info = None
 
         self.app = Application(client=True)
         self._services = BleakGATTServiceCollectionCoreBluetooth()
@@ -56,8 +62,6 @@ class BleakClientCoreBluetooth(BaseBleakClient):
         self._device_info = None
         self._requester = None
         self._callbacks = {}
-
-        self._disconnected_callback = None
 
     def __str__(self):
         return "BleakClientCoreBluetooth ({})".format(self.address)
@@ -69,66 +73,38 @@ class BleakClientCoreBluetooth(BaseBleakClient):
         """Connect to a specified Peripheral
 
         Keyword Args:
-            timeout (float): Timeout for required ``discover`` call. Defaults to 2.0.
+            timeout (float): Timeout for required ``BleakScanner.find_device_by_address`` call. Defaults to 10.0.
 
         Returns:
             Boolean representing connection status.
 
 
         """
-        timeout = kwargs.get("timeout", self._timeout)
-        await self.is_ready()
-
-        # Follow
-        # devices = await discover(timeout=timeout, loop=self.loop)
-        devices = await self.scan_for_devices(timeout=timeout)
-
-        sought_device = list(
-            filter(lambda x: x.address.upper() == self.address.upper(), devices)
-        )
-
-        if len(sought_device):
-            self._device_info = sought_device[0].details
-        else:
-            raise BleakError(
-                "Device with address {} was not found".format(self.address)
+        if self._device_info is None:
+            timeout = kwargs.get("timeout", self._timeout)
+            device = await BleakScannerCoreBluetooth.find_device_by_address(
+                self.address, timeout=timeout
             )
+
+            if device:
+                self._device_info = device.details
+            else:
+                raise BleakError(
+                    "Device with address {} was not found".format(self.address)
+                )
 
         logger.debug("Connecting to BLE device @ {}".format(self.address))
 
         manager = self._device_info.manager().delegate()
-        await manager.connect_(sought_device[0].details)
+        await manager.connect_(self._device_info)
+        manager.disconnected_callback = self._disconnected_callback_client
 
         # Now get services
         await self.get_services()
 
         return True
 
-    async def disconnect(self) -> bool:
-        """Disconnect from the peripheral device"""
-        manager = self._device_info.manager().delegate()
-        await manager.disconnect()
-        self.services = BleakGATTServiceCollection()
-        return True
-
-    async def is_connected(self) -> bool:
-        """Checks for current active connection"""
-        manager = self._device_info.manager().delegate()
-        return manager.isConnected
-
-    def set_disconnected_callback(
-        self, callback: Callable[[BaseBleakClient], None], **kwargs
-    ) -> None:
-        """Set the disconnected callback.
-        Args:
-            callback: callback to be called on disconnection.
-
-        """
-        manager = self._device_info.manager().delegate()
-        self._disconnected_callback = callback
-        manager.disconnected_callback = self._disconnect_callback_client
-
-    def _disconnect_callback_client(self):
+    def _disconnected_callback_client(self):
         """
         Callback for device disconnection. Bleak callback sends one argument as client. This is wrapper function
         that gets called from the CentralManager and call actual disconnected_callback by sending client as argument
@@ -138,6 +114,50 @@ class BleakClientCoreBluetooth(BaseBleakClient):
         if self._disconnected_callback is not None:
             self._disconnected_callback(self)
 
+    async def disconnect(self) -> bool:
+        """Disconnect from the peripheral device"""
+        manager = self._device_info.manager().delegate()
+        await manager.disconnect()
+        self.services = BleakGATTServiceCollection()
+        # Ensure that `get_services` retrieves services again, rather than using the cached object
+        self._services_resolved = False
+        self._services = None
+        return True
+
+    async def is_connected(self) -> bool:
+        """Checks for current active connection"""
+        manager = self._device_info.manager().delegate()
+        return manager.isConnected
+
+    async def pair(self, *args, **kwargs) -> bool:
+        """Attempt to pair with a peripheral.
+
+        .. note::
+
+            This is not available on macOS since there is not explicit method to do a pairing, Instead the docs
+            state that it "auto-pairs" when trying to read a characteristic that requires encryption, something
+            Bleak cannot do apparently.
+
+        Reference:
+
+            - `Apple Docs <https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/BestPracticesForSettingUpYourIOSDeviceAsAPeripheral/BestPracticesForSettingUpYourIOSDeviceAsAPeripheral.html#//apple_ref/doc/uid/TP40013257-CH5-SW1>`_
+            - `Stack Overflow post #1 <https://stackoverflow.com/questions/25254932/can-you-pair-a-bluetooth-le-device-in-an-ios-app>`_
+            - `Stack Overflow post #2 <https://stackoverflow.com/questions/47546690/ios-bluetooth-pairing-request-dialog-can-i-know-the-users-choice>`_
+
+        Returns:
+            Boolean regarding success of pairing.
+
+        """
+        raise NotImplementedError("Pairing is not available in Core Bluetooth.")
+
+    async def unpair(self) -> bool:
+        """
+
+        Returns:
+
+        """
+        raise NotImplementedError("Pairing is not available in Core Bluetooth.")
+
     async def get_services(self) -> BleakGATTServiceCollection:
         """Get all services registered for this GATT server.
 
@@ -145,13 +165,8 @@ class BleakClientCoreBluetooth(BaseBleakClient):
            A :py:class:`bleak.backends.service.BleakGATTServiceCollection` with this device's services tree.
 
         """
-
-        # Current client has the following lines but this won't work because we
-        # don't initialize the _services to None
-        #if self._services is not None:
-        #    return self._services
-        if self._services_resolved:
-            return self._services
+        if self._services is not None:
+            return self.services
 
         logger.debug("Retrieving services...")
         manager = self._device_info.manager().delegate()
@@ -189,7 +204,8 @@ class BleakClientCoreBluetooth(BaseBleakClient):
                             int(characteristic.handle()),
                         )
                     )
-
+        logger.info("Services resolved for %s", str(self))
+        
         self._services_resolved = True
         # Develop Client overwrites the BleakGATTServiceCollection
         # self._services = services
@@ -340,17 +356,17 @@ class BleakClientCoreBluetooth(BaseBleakClient):
     async def start_notify(
         self,
         char_specifier: Union[BleakGATTCharacteristic, int, str, uuid.UUID],
-        callback: Callable[[str, Any], Any],
+        callback: Callable[[int, bytearray], None],
         **kwargs
     ) -> None:
         """Activate notifications/indications on a characteristic.
 
-        Callbacks must accept two inputs. The first will be a uuid string
-        object and the second will be a bytearray.
+        Callbacks must accept two inputs. The first will be a integer handle of the characteristic generating the
+        data and the second will be a ``bytearray`` containing the data sent from the connected server.
 
         .. code-block:: python
 
-            def callback(sender, data):
+            def callback(sender: int, data: bytearray):
                 print(f"{sender}: {data}")
             client.start_notify(char_uuid, callback)
 
@@ -410,3 +426,19 @@ class BleakClientCoreBluetooth(BaseBleakClient):
             raise BleakError(
                 "Could not stop notify on {0}: {1}".format(characteristic.uuid, success)
             )
+
+    async def get_rssi(self) -> int:
+        """To get RSSI value in dBm of the connected Peripheral"""
+
+        self._device_info.readRSSI()
+        manager = self._device_info.manager().delegate()
+        RSSI = manager.connected_peripheral.RSSI()
+        for i in range(20):  # First time takes a little otherwise returns None
+            RSSI = manager.connected_peripheral.RSSI()
+            if not RSSI:
+                await asyncio.sleep(0.1)
+            else:
+                return int(RSSI)
+
+        if not RSSI:
+            return None

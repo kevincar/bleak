@@ -26,9 +26,7 @@ class GattCharacteristicsFlags(enum.Enum):
     writable_auxiliaries = 0x0200
 
 class BleakGATTCharacteristic(abc.ABC):
-    """Interface for the Bleak representation of a GATT Characteristic
-
-    """
+    """Interface for the Bleak representation of a GATT Characteristic"""
 
     def __init__(self, obj: Any):
         self.obj = obj

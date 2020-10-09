@@ -150,8 +150,8 @@ class BleakGATTServiceCollection(abc.ABC):
     def add_descriptor(self, descriptor: BleakGATTDescriptor):
         """Add a :py:class:`~BleakGATTDescriptor` to the service collection.
 
-         Should not be used by end user, but rather by `bleak` itself.
-         """
+        Should not be used by end user, but rather by `bleak` itself.
+        """
         if descriptor.handle not in self.__descriptors:
             self.__descriptors[descriptor.handle] = descriptor
             self.__characteristics[descriptor.characteristic_handle].add_descriptor(
