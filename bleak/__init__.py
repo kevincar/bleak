@@ -60,9 +60,16 @@ elif platform.system() == "Darwin":
     from bleak.backends.corebluetooth.scanner import (
         BleakScannerCoreBluetooth as BleakScanner,
     )  # noqa
+
     from bleak.backends.corebluetooth.client import (
         BleakClientCoreBluetooth as BleakClient,
     )  # noqa
+
+    from bleak.backends.corebluetooth.server import BleakServerCoreBluetooth as BleakServer
+    from bleak.backends.corebluetooth.service import BleakGATTServiceCoreBluetooth as BleakGATTService
+    from bleak.backends.corebluetooth.service import BleakGATTServiceCollectionCoreBluetooth as BleakGATTServiceCollection
+    from bleak.backends.corebluetooth.characteristic import BleakGATTCharacteristicCoreBluetooth as BleakGATTCharacteristic
+    from bleak.backends.corebluetooth.characteristic import CBAttributePermissions as BleakGATTPermissions
 
 elif platform.system() == "Windows":
     # Requires Windows 10 Creators update at least, i.e. Window 10.0.16299
@@ -82,6 +89,10 @@ elif platform.system() == "Windows":
     from bleak.backends.dotnet.discovery import discover  # noqa
     from bleak.backends.dotnet.scanner import BleakScannerDotNet as BleakScanner  # noqa
     from bleak.backends.dotnet.client import BleakClientDotNet as BleakClient  # noqa
+    from bleak.backends.dotnet.server import BleakServerDotNet as BleakServer
+    from bleak.backends.dotnet.service import BleakGATTServiceDotNet as BleakGATTService
+    from bleak.backends.dotnet.service import BleakGATTServiceCollectionDotNet as BleakGATTServiceCollection
+    from bleak.backends.dotnet.characteristic import BleakGATTCharacteristicDotNet as BleakGATTCharacteristic
 
 
 def cli():

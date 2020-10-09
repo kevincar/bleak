@@ -25,7 +25,6 @@ class GattCharacteristicsFlags(enum.Enum):
     reliable_write = 0x0100
     writable_auxiliaries = 0x0200
 
-
 class BleakGATTCharacteristic(abc.ABC):
     """Interface for the Bleak representation of a GATT Characteristic"""
 
@@ -67,6 +66,12 @@ class BleakGATTCharacteristic(abc.ABC):
 
     @property
     @abc.abstractmethod
+    def value(self) -> bytearray:
+        """Value of this characteristic"""
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
     def descriptors(self) -> List:
         """List of descriptors for this service"""
         raise NotImplementedError()
@@ -84,4 +89,9 @@ class BleakGATTCharacteristic(abc.ABC):
 
         Should not be used by end user, but rather by `bleak` itself.
         """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def set_value(self, value: bytearray):
+        """Set the value for the characteristic"""
         raise NotImplementedError()

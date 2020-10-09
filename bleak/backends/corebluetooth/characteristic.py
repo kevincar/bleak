@@ -4,17 +4,19 @@ Interface class for the Bleak representation of a GATT Characteristic
 Created on 2019-06-28 by kevincar <kevincarrolldavis@gmail.com>
 
 """
+
+import logging
+
 from enum import Enum
 from typing import List, Union
 
-from Foundation import CBCharacteristic
+from Foundation import CBCharacteristic, CBMutableCharacteristic, CBUUID, NSData
 
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak.backends.corebluetooth.descriptor import BleakGATTDescriptorCoreBluetooth
 from bleak.backends.descriptor import BleakGATTDescriptor
 from bleak.backends.corebluetooth.utils import cb_uuid_to_str
 from bleak.uuids import uuidstr_to_str
-
 
 class CBChacteristicProperties(Enum):
     BROADCAST = 0x1
@@ -28,6 +30,11 @@ class CBChacteristicProperties(Enum):
     NOTIFY_ENCRYPTION_REQUIRED = 0x100
     INDICATE_ENCRYPTION_REQUIRED = 0x200
 
+class CBAttributePermissions(Enum):
+    Readable = 0x1
+    Writeable = 0x2
+    ReadEncryptionRequired = 0x4
+    WriteEncryptionRequired = 0x8
 
 _GattCharacteristicsPropertiesEnum = {
     None: ("None", "The characteristic doesn’t have any properties that apply"),
@@ -73,7 +80,7 @@ class BleakGATTCharacteristicCoreBluetooth(BleakGATTCharacteristic):
 
     def __str__(self):
         return "{0}: {1}".format(self.uuid, self.description)
-
+    
     @property
     def service_uuid(self) -> str:
         """The uuid of the Service containing this characteristic"""
@@ -101,6 +108,11 @@ class BleakGATTCharacteristicCoreBluetooth(BleakGATTCharacteristic):
         return self.__props
 
     @property
+    def value(self) -> bytearray:
+        """Value of this characteristic"""
+        return self.obj.value()
+
+    @property
     def descriptors(self) -> List[BleakGATTDescriptorCoreBluetooth]:
         """List of descriptors for this service"""
         return self.__descriptors
@@ -125,3 +137,7 @@ class BleakGATTCharacteristicCoreBluetooth(BleakGATTCharacteristic):
         Should not be used by end user, but rather by `bleak` itself.
         """
         self.__descriptors.append(descriptor)
+
+    def set_value(self, value: bytearray):
+        """Set the value for the characteristic"""
+        self.obj.setValue_(value)

@@ -36,7 +36,9 @@ class BaseBleakClient(abc.ABC):
         else:
             self.address = address_or_ble_device
 
-        self.services = BleakGATTServiceCollection()
+        # Service collcetions must be initiated from the backend
+        # OS specific object for the Server version
+        # self.services = BleakGATTServiceCollection()
 
         self._services_resolved = False
         self._notification_callbacks = {}

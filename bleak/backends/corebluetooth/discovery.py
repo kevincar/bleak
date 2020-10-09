@@ -12,6 +12,9 @@ from typing import List
 
 from bleak.backends.corebluetooth.CentralManagerDelegate import CentralManagerDelegate
 from bleak.backends.device import BLEDevice
+
+from ..corebluetooth.client import BleakClientCoreBluetooth as BleakClient
+
 from bleak.exc import BleakError
 
 

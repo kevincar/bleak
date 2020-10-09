@@ -11,6 +11,7 @@ import logging
 from typing import Callable, Any
 
 import objc
+
 from Foundation import (
     NSObject,
     CBPeripheral,
